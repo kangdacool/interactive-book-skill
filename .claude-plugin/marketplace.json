@@ -1,0 +1,27 @@
+{
+  "name": "kangdacool-ibook",
+  "owner": {
+    "name": "kangdacool",
+    "url": "https://github.com/kangdacool"
+  },
+  "description": "만져 보며 배우는 인터랙티브 교과서·의대 과외용 한 장을 만드는 에이전트 스킬.",
+  "plugins": [
+    {
+      "name": "ibook",
+      "displayName": "Interactive Book",
+      "source": "./",
+      "skills": ["./skills/interactive-book", "./skills/med-tutor-viz"],
+      "description": "한 주제를 시뮬레이터 중심 웹 교과서로 만들어 GitHub Pages 로 배포하거나(/ibook:interactive-book), 의대 강의 하나를 시험 축만 골라 빠른 인터랙티브 한 장으로 만든다(/ibook:med-tutor-viz). 조작 전수 검사(poke.py)와 공개 전 점검 배포 스크립트 포함. Build simulator-first interactive textbooks and fast exam-prep pages for medical students.",
+      "author": {
+        "name": "kangdacool",
+        "url": "https://github.com/kangdacool"
+      },
+      "homepage": "https://github.com/kangdacool/interactive-book-skill#readme",
+      "repository": "https://github.com/kangdacool/interactive-book-skill",
+      "license": "MIT",
+      "keywords": ["interactive", "textbook", "simulation", "education", "medical", "github-pages", "korean"],
+      "category": "productivity",
+      "strict": false
+    }
+  ]
+}

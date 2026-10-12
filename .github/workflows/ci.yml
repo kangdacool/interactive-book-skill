@@ -1,0 +1,24 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install
+        run: pip install playwright && python -m playwright install --with-deps chromium
+      - name: compile
+        run: python -m py_compile skills/interactive-book/scripts/*.py skills/med-tutor-viz/scripts/*.py
+      - name: poke template (desktop + phone)
+        run: |
+          python skills/interactive-book/scripts/poke.py skills/interactive-book/assets/template.html
+          python skills/interactive-book/scripts/poke.py skills/interactive-book/assets/template.html --phone
+      - name: deploy_pages blocks source documents
+        run: |
+          mkdir -p /tmp/site && cp skills/interactive-book/assets/template.html /tmp/site/index.html && echo x > /tmp/site/lecture.pdf
+          ! python skills/interactive-book/scripts/deploy_pages.py /tmp/site x 2>/dev/null || (echo "should have blocked" && exit 1)
+      - name: student package builds without leaks
+        run: python skills/med-tutor-viz/scripts/package_for_student.py /tmp/pkg

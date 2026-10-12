@@ -1,0 +1,258 @@
+<!doctype html>
+<!-- template.html — interactive-book / med-tutor-viz 공용 출발점. 한 파일로 돈다(file:// 가능, ES module 없음).
+     구조·컴포넌트 아이디어는 Books 시리즈(books.euiyun.com, 코드 MIT)의 작성 가이드에서 배웠고, 코드는 새로 썼다.
+     쓰는 법: 이 파일을 복사 → <title>·hero·section 을 채운다 → 예시 시뮬레이터(sim-demo)를 지우고 내 것을 넣는다.
+     색은 직접 적지 않는다 — :root 토큰만 쓴다(다크 모드). 캔버스 색은 K.color('--acc') 로 읽는다. -->
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제목 두세 단어</title>
+<meta name="description" content="이 페이지가 무엇을 보여 주는지 한 문장">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script>try { var t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}</script>
+<style>
+:root {
+  --bg: #fbfaf8; --surface: #ffffff; --elev: #f2f0ec; --line: #e2ded8;
+  --text: #1f1c1e; --dim: #6b6670; --acc: #c2255c; --acc2: #1971c2;
+  --ok: #2b8a3e; --warn: #e67700; --bad: #e03131;
+  --acc-soft: #c2255c1f; --acc2-soft: #1971c21f; --bad-soft: #e031311f; --ok-soft: #2b8a3e1f;
+  --mono-bg: #101418; --mono-fg: #d8f5d0;
+  --r: 12px; --w: 760px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #17151a; --surface: #201d23; --elev: #2a262e; --line: #3a3540;
+  --text: #ece8ef; --dim: #a39daa; --acc: #f783ac; --acc2: #74c0fc;
+  --ok: #69db7c; --warn: #ffa94d; --bad: #ff8787;
+  --acc-soft: #f783ac26; --acc2-soft: #74c0fc26; --bad-soft: #ff878726; --ok-soft: #69db7c26;
+}}
+:root[data-theme="dark"] {
+  --bg: #17151a; --surface: #201d23; --elev: #2a262e; --line: #3a3540;
+  --text: #ece8ef; --dim: #a39daa; --acc: #f783ac; --acc2: #74c0fc;
+  --ok: #69db7c; --warn: #ffa94d; --bad: #ff8787;
+  --acc-soft: #f783ac26; --acc2-soft: #74c0fc26; --bad-soft: #ff878726; --ok-soft: #69db7c26;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.75 Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; word-break: keep-all; }
+.topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.topbar .name { font-weight: 700; } .topbar .sp { flex: 1; }
+.topbar button { background: none; border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 4px 10px; cursor: pointer; font: inherit; font-size: 14px; }
+main { max-width: var(--w); margin: 0 auto; padding: 0 16px 80px; }
+.hero { padding: 48px 0 16px; }
+.eyebrow { color: var(--acc); font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.25; margin: 6px 0 12px; }
+.lead { font-size: 19px; color: var(--dim); margin: 0 0 16px; }
+.objectives { margin: 0; padding: 14px 18px 14px 34px; background: var(--elev); border-radius: var(--r); }
+section { margin-top: 48px; counter-increment: sec; }
+h2 { font-size: 24px; line-height: 1.35; margin: 0 0 12px; }
+h2::before { content: counter(sec) ". "; color: var(--acc); }
+h3 { font-size: 18px; margin: 0; }
+.term { font-weight: 700; } .en { color: var(--dim); font-size: .9em; margin-left: 2px; }
+.callout { border-left: 4px solid var(--acc2); background: var(--acc2-soft); padding: 12px 16px; border-radius: 0 var(--r) var(--r) 0; margin: 16px 0; }
+.callout.warn { border-color: var(--bad); background: var(--bad-soft); }
+.callout.tip { border-color: var(--ok); background: var(--ok-soft); }
+.numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+.numbers > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.numbers b { display: block; font-size: 22px; color: var(--acc); } .numbers span { color: var(--dim); font-size: 14px; }
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: var(--elev); } td.num { text-align: right; font-variant-numeric: tabular-nums; }
+figure.diagram { margin: 20px 0; } figure.diagram svg { width: 100%; height: auto; display: block; }
+figcaption { color: var(--dim); font-size: 14px; margin-top: 6px; }
+/* 시뮬레이터 */
+.sim { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin: 24px 0; overflow: hidden; }
+.sim-head { display: flex; align-items: baseline; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.sim-tag { font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--acc); }
+.sim-body { display: grid; gap: 14px; padding: 14px 16px; }
+.sim-body.side { grid-template-columns: minmax(0, 1fr) 220px; }
+@media (max-width: 640px) { .sim-body.side { grid-template-columns: 1fr; } }
+.sim-view { position: relative; min-width: 0; } .sim-view canvas { width: 100%; height: 280px; display: block; border-radius: 8px; background: var(--elev); touch-action: none; }
+.sim-view.monitor canvas { background: var(--mono-bg); }
+.hint { position: absolute; right: 8px; bottom: 6px; font-size: 12px; color: var(--dim); pointer-events: none; }
+.sim-controls { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.ctrl { display: flex; flex-direction: column; gap: 4px; } .ctrl > span { display: flex; justify-content: space-between; }
+.ctrl output { font-variant-numeric: tabular-nums; color: var(--acc); font-weight: 700; }
+input[type=range] { width: 100%; accent-color: var(--acc); }
+.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1; border: 0; background: none; color: var(--text); padding: 6px 4px; cursor: pointer; font: inherit; font-size: 14px; }
+.seg button.on { background: var(--acc); color: #fff; }
+.btn { border: 1px solid var(--line); background: var(--elev); color: var(--text); border-radius: 8px; padding: 6px 12px; cursor: pointer; font: inherit; font-size: 14px; }
+.btn.primary { background: var(--acc); border-color: var(--acc); color: #fff; }
+.sim-readout { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--elev); font-size: 14px; }
+.stat .k { color: var(--dim); margin-right: 6px; } .stat .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .ref { color: var(--dim); font-size: 12px; margin-left: 4px; }
+.sim-note { padding: 10px 16px 14px; font-size: 14px; color: var(--dim); }
+/* 감별 비교: 두 칸을 토글로 겹쳐 본다 */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+@media (max-width: 560px) { .compare { grid-template-columns: 1fr; } }
+.compare > div { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: var(--surface); }
+.compare h4 { margin: 0 0 6px; }
+.compare .diff { background: var(--acc-soft); border-radius: 4px; padding: 0 3px; }
+.keypoints { background: var(--elev); border-radius: var(--r); padding: 4px 20px 12px; }
+.quiz-q { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; margin: 12px 0; background: var(--surface); }
+.quiz-q p { margin: 0 0 8px; font-weight: 600; }
+.opts { display: grid; gap: 6px; }
+.opt { text-align: left; border: 1px solid var(--line); background: var(--bg); color: var(--text); border-radius: 8px; padding: 8px 12px; cursor: pointer; font: inherit; font-size: 15px; }
+.opt.right { border-color: var(--ok); background: var(--ok-soft); } .opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.quiz-exp { display: none; margin-top: 8px; font-size: 14px; color: var(--dim); } .quiz-q.done .quiz-exp { display: block; }
+footer { max-width: var(--w); margin: 0 auto; padding: 24px 16px 48px; color: var(--dim); font-size: 13px; border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="topbar"><span class="name">시리즈 또는 주제 이름</span><span class="sp"></span>
+  <button id="sims-only" type="button">시뮬레이터만</button><button id="theme" type="button">다크</button></div>
+<main>
+  <header class="hero">
+    <div class="eyebrow">Chapter 01</div>
+    <h1>장 제목(이름형)</h1>
+    <p class="lead">이 장이 답하는 질문 한 문장.</p>
+    <ul class="objectives"><li>읽고 나면 할 수 있는 것 1</li><li>읽고 나면 할 수 있는 것 2</li></ul>
+  </header>
+
+  <section id="s1">
+    <h2>절 제목</h2>
+    <p>무엇을 움직여 볼지 두세 문장.</p>
+    <!-- 예시 시뮬레이터: 지우고 쓴다. 한 시뮬레이터 = 한 질문, 컨트롤 1~4개, 끝까지 밀면 무너지는 모습. -->
+    <div class="sim" id="sim-demo" data-desc="갤러리용 한 문장: 무엇을 바꾸면 무엇이 보이는가">
+      <div class="sim-head"><span class="sim-tag">SIMULATOR</span><h3>예시: 기울기를 바꾸면 곡선이 어디서 꺾이나</h3></div>
+      <div class="sim-body side">
+        <div class="sim-view"><canvas id="demo-cv"></canvas><span class="hint">점을 끌어 본다</span></div>
+        <div class="sim-controls">
+          <label class="ctrl"><span>기울기 <output id="demo-k-out"></output></span><input type="range" id="demo-k" min="0.2" max="4" step="0.1" value="1"></label>
+          <div class="seg" id="demo-mode"><button data-value="a" class="on">정상</button><button data-value="b">질환</button></div>
+          <button class="btn" id="demo-reset" type="button">다시</button>
+        </div>
+      </div>
+      <div class="sim-readout"><div class="stat"><span class="k">출력</span><span class="v" id="demo-y">—</span><span class="ref">(참고 0.4–0.6)</span></div></div>
+      <div class="sim-note">해볼 것: ① 기울기를 끝까지 올린다 ② ‘질환’을 누른다 ③ 점을 오른쪽 끝으로 끈다. 교육용 근사 모델이다.</div>
+    </div>
+    <p>무엇을 봤는지 두세 문장.</p>
+  </section>
+
+  <section class="keypoints" id="summary"><h2>핵심 정리</h2><ol><li>…</li></ol></section>
+
+  <section id="quiz"><h2>확인 문제</h2>
+    <div class="quiz-q"><p>문제</p><div class="opts"><button class="opt">오답</button><button class="opt" data-correct>정답</button><button class="opt">오답</button></div><div class="quiz-exp">해설 한두 문장.</div></div>
+  </section>
+</main>
+<footer>출처: …(교과서 장·지침·논문, PMID/DOI). 시뮬레이터 수치는 교육용 근사 모델이다.</footer>
+
+<script>
+/* K — 작은 공용 도우미. 이 블록은 고치지 않고, 장 고유 코드는 아래 블록에 쓴다. */
+window.K = (function () {
+  "use strict";
+  const css = getComputedStyle(document.documentElement);
+  const color = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
+  // 캔버스: 화면 배율에 맞춰 선명하게. draw(ctx, w, h) 를 크기 바뀔 때마다 다시 부른다.
+  function canvas(id, draw) {
+    const cv = document.getElementById(id), ctx = cv.getContext("2d");
+    const st = { cv, ctx, w: 0, h: 0, draw };
+    function fit() {
+      const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+      st.w = r.width; st.h = r.height; cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d);
+      ctx.setTransform(d, 0, 0, d, 0, 0); st.redraw();
+    }
+    st.redraw = () => { ctx.clearRect(0, 0, st.w, st.h); st.draw && st.draw(ctx, st.w, st.h); };
+    new ResizeObserver(fit).observe(cv); fit();
+    return st;
+  }
+  // 슬라이더: id 목록과 값 서식. 값이 바뀌면 onChange(values) 를 부른다.
+  function sliders(ids, onChange, fmt) {
+    const get = () => Object.fromEntries(ids.map((i) => [i, parseFloat(document.getElementById(i).value)]));
+    ids.forEach((i) => {
+      const el = document.getElementById(i), out = document.getElementById(i + "-out");
+      const upd = () => { if (out) out.textContent = fmt && fmt[i] ? fmt[i](+el.value) : el.value; onChange(get()); };
+      el.addEventListener("input", upd); if (out) out.textContent = fmt && fmt[i] ? fmt[i](+el.value) : el.value;
+    });
+    return get;
+  }
+  // 세그먼트 버튼: 고른 값을 onChange(value) 로.
+  function seg(id, onChange) {
+    const box = document.getElementById(id); let val = (box.querySelector(".on") || box.querySelector("button")).dataset.value;
+    box.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return;
+      box.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); val = b.dataset.value; onChange(val); });
+    return () => val;
+  }
+  // 끌기: handles = [{x, y, r}] (캔버스 CSS 좌표). onMove(handle, x, y).
+  function drag(st, handles, onMove) {
+    let cur = null;
+    const pos = (e) => { const r = st.cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    st.cv.addEventListener("pointerdown", (e) => { const [x, y] = pos(e);
+      cur = handles().find((h) => Math.hypot(h.x - x, h.y - y) < (h.r || 10) + 8) || null;
+      if (cur) st.cv.setPointerCapture(e.pointerId); });
+    st.cv.addEventListener("pointermove", (e) => { if (!cur) return; const [x, y] = pos(e); onMove(cur, x, y); });
+    st.cv.addEventListener("pointerup", () => { cur = null; });
+  }
+  // 반복 그리기: 화면에 보일 때만 돈다.
+  function loop(st, step) {
+    let on = false, last = 0;
+    new IntersectionObserver(([en]) => { on = en.isIntersecting; if (on) requestAnimationFrame(tick); }).observe(st.cv);
+    function tick(t) { if (!on) return; const dt = Math.min(0.05, (t - (last || t)) / 1000); last = t; step(dt); st.redraw(); requestAnimationFrame(tick); }
+  }
+  // 축: x0..x1, y0..y1 데이터 범위를 캔버스 칸에 그리고 변환 함수를 돌려준다.
+  function axes(ctx, w, h, o) {
+    const p = { l: 44, r: 12, t: 12, b: 34 }, X = (x) => p.l + (x - o.x0) / (o.x1 - o.x0) * (w - p.l - p.r),
+      Y = (y) => h - p.b - (y - o.y0) / (o.y1 - o.y0) * (h - p.t - p.b);
+    ctx.strokeStyle = color("--line"); ctx.fillStyle = color("--dim"); ctx.lineWidth = 1; ctx.font = "12px Pretendard, sans-serif";
+    ctx.beginPath(); ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, h - p.b); ctx.lineTo(w - p.r, h - p.b); ctx.stroke();
+    ctx.textAlign = "center"; ctx.fillText(o.xl || "", (p.l + w - p.r) / 2, h - 8);
+    ctx.save(); ctx.translate(12, (p.t + h - p.b) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(o.yl || "", 0, 0); ctx.restore();
+    return { X, Y, p };
+  }
+  // 퀴즈·테마·시뮬레이터만 보기
+  document.addEventListener("click", (e) => {
+    const o = e.target.closest(".opt"); if (!o) return; const q = o.closest(".quiz-q"); if (q.classList.contains("done")) return;
+    q.classList.add("done"); q.querySelectorAll(".opt").forEach((b) => { if (b.hasAttribute("data-correct")) b.classList.add("right"); });
+    if (!o.hasAttribute("data-correct")) o.classList.add("wrong");
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    const th = document.getElementById("theme");
+    const now = () => document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    if (th) th.textContent = now() === "dark" ? "라이트" : "다크";
+    th && th.addEventListener("click", () => { const d = document.documentElement;
+      const next = now() === "dark" ? "light" : "dark";
+      d.dataset.theme = next; try { localStorage.setItem("theme", next); } catch (e) {} location.reload(); });
+    const so = document.getElementById("sims-only");
+    so && so.addEventListener("click", () => { const on = so.classList.toggle("on");
+      document.querySelectorAll("main section > :not(h2):not(.sim)").forEach((el) => { el.style.display = on ? "none" : ""; });
+      so.textContent = on ? "글도 보기" : "시뮬레이터만"; });
+    if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\(", right: "\\)", display: false }] });
+  });
+  return { color, canvas, sliders, seg, drag, loop, axes };
+})();
+</script>
+<script>
+/* 장 고유 코드 — 시뮬레이터 하나에 IIFE 하나. */
+(function () {
+  "use strict";
+  // 순서: 상태·컨트롤을 먼저 만들고 캔버스는 마지막에 — K.canvas 가 만들자마자 draw 를 부른다.
+  let hx = 0.5, A, st; // 끄는 점의 x (0..1), 축 변환, 캔버스
+  const redraw = () => st && st.redraw();
+  const vals = K.sliders(["demo-k"], redraw, { "demo-k": (v) => v.toFixed(1) });
+  const mode = K.seg("demo-mode", redraw);
+  document.getElementById("demo-reset").addEventListener("click", () => { hx = 0.5; document.getElementById("demo-k").value = 1; document.getElementById("demo-k").dispatchEvent(new Event("input")); });
+  const f = (x) => { const k = vals()["demo-k"] * (mode() === "b" ? 0.5 : 1); return 1 - Math.exp(-k * x * 3); };
+  function draw(ctx, w, h) {
+    A = K.axes(ctx, w, h, { x0: 0, x1: 1, y0: 0, y1: 1, xl: "입력 (단위)", yl: "출력 (단위)" });
+    ctx.strokeStyle = K.color("--acc"); ctx.lineWidth = 2.5; ctx.beginPath();
+    for (let i = 0; i <= 100; i++) { const x = i / 100; i ? ctx.lineTo(A.X(x), A.Y(f(x))) : ctx.moveTo(A.X(x), A.Y(f(x))); }
+    ctx.stroke();
+    const y = f(hx); ctx.fillStyle = K.color("--surface"); ctx.strokeStyle = K.color("--acc"); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(A.X(hx), A.Y(y), 8, 0, 7); ctx.fill(); ctx.stroke();
+    if (y > 0.9) { ctx.fillStyle = K.color("--bad"); ctx.textAlign = "left"; ctx.fillText("포화 — 더 올려도 늘지 않는다", A.X(0.05), A.Y(0.97)); }
+    document.getElementById("demo-y").textContent = y.toFixed(2);
+  }
+  st = K.canvas("demo-cv", draw);
+  K.drag(st, () => [{ x: A.X(hx), y: A.Y(f(hx)), r: 8 }], (hd, x) => { hx = Math.max(0, Math.min(1, (x - A.p.l) / (st.w - A.p.l - A.p.r))); st.redraw(); });
+})();
+</script>
+</body>
+</html>
