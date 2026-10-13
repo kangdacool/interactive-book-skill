@@ -30,12 +30,43 @@
   {"js": "..."} 는 페이지가 K.probe 에 올린 모델 함수를 부른다 — 화면 숫자로 안 드러나는 «위상·방향» 을 묻는 자리다
   (예: K.probe.ppvInspMinusExp() > 0 — 흡기 박동의 수축기압이 호기보다 높다).
 .sim 이 있는데 expect 가 없으면 실패한다(--no-expect 로 끈다). 하나라도 틀리면 실패다.
+expect 는 «목록» 이어야 하고 항목마다 vary·read 가 있어야 한다 — 꼴이 틀리면 무엇이 틀렸는지 말하고 실패한다.
+⛔ name 에 근거(쪽수·그림·표 번호: p.12 · pp.47–55 · 쪽 · Fig/그림 · Table/표 · Exhibit · 식)가 없으면 실패한다.
+근거를 못 다는 방향은 시뮬레이터로 만들지 않는다(확인 목록으로 보낸다) — 2026-10-13 시험에서 근거 없는 방향 위에
+시뮬레이터를 세운 페이지가 검사를 통과했다.
+경고(실패 아님): 화면 글에 «» 가 6개 이상이면 센다(강조 부호 남발 — 같은 시험에서 한 페이지에 35개).
+
+이 파일은 스킬 폴더 안에서 그대로 돌린다. 못 찾았다고 검사기를 새로 짜지 않는다 — 새로 짠 검사기는 이 검사들을 빠뜨린다.
 
 필요: pip install playwright && python -m playwright install chromium (또는 설치된 Chrome 을 channel="chrome" 으로 쓴다).
 """
 import argparse, json, pathlib, re, sys
 
 NUM = re.compile(r"[-−]?\d+(?:\.\d+)?")
+CITE = re.compile(r"pp?\.\s*\d|\d\s*쪽|fig(ure)?\.?\s*\d|그림\s*\d|table\s*\d|표\s*\d|exhibit\s*\d|식\s*\(?\d|eq\.?\s*\(?\d", re.I)
+VARY_KEYS = ("set", "click", "drag", "wait")
+
+
+def check_schema(checks):
+    """expect 꼴 검사. 틀린 곳 목록을 돌려준다(빈 목록 = 통과)."""
+    if not isinstance(checks, list):
+        got = f"키 {sorted(checks)}" if isinstance(checks, dict) else type(checks).__name__
+        return [f"expect 는 항목의 «목록» [ {{...}}, {{...}} ] 이어야 한다 — 받은 것: {got}. 머리말의 항목 꼴을 본다"]
+    bad = []
+    for i, c in enumerate(checks):
+        tag = f"#{i + 1}"
+        if not isinstance(c, dict):
+            bad.append(f"{tag}: 항목이 객체가 아니다({type(c).__name__})"); continue
+        tag += f" {c.get('name', '(이름 없음)')[:40]}"
+        if "vary" not in c or not isinstance(c["vary"], dict) or not any(k in c["vary"] for k in VARY_KEYS):
+            bad.append(f"{tag}: vary 가 없거나 꼴이 틀렸다(set·click·drag·wait 중 하나)")
+        if "read" not in c:
+            bad.append(f"{tag}: read 가 없다")
+        if not any(k in c for k in ("trend", "range", "has")):
+            bad.append(f"{tag}: 판정(trend·range·has)이 없다")
+        if not CITE.search(c.get("name", "")):
+            bad.append(f"{tag}: name 에 근거(쪽수·그림·표 번호)가 없다 — 못 달면 이 방향의 시뮬레이터를 빼고 확인 목록으로")
+    return bad
 
 
 def _num(text):
@@ -166,10 +197,18 @@ def main():
             if has_sim:
                 efails.append("방향 검사(<script type=application/json id=expect>)가 없다 — 시뮬레이터마다 «바꾸면 어느 쪽으로»를 적는다")
         else:
-            checks = json.loads(raw)
-            print(f"방향 검사 {len(checks)}개")
-            efails = run_expect(pg, url, checks)
-            pg.goto(url, wait_until="load"); pg.wait_for_timeout(500)
+            try:
+                checks = json.loads(raw)
+            except json.JSONDecodeError as e:
+                checks, efails = None, [f"expect 가 JSON 이 아니다: {e}"]
+            if checks is not None:
+                efails = check_schema(checks)
+                if efails:
+                    print("방향 검사 꼴이 틀렸다 — 돌리지 않았다")
+                else:
+                    print(f"방향 검사 {len(checks)}개")
+                    efails = run_expect(pg, url, checks)
+                    pg.goto(url, wait_until="load"); pg.wait_for_timeout(500)
 
         # 2. 모든 조작
         for i, sim in enumerate(pg.query_selector_all(".sim")):
@@ -201,6 +240,7 @@ def main():
                 sim.screenshot(path=str(pathlib.Path(a.shots) / f"{sid}.png"))
 
         over = pg.evaluate("() => document.documentElement.scrollWidth - window.innerWidth")
+        guil = pg.evaluate("() => (document.body.innerText.match(/«/g) || []).length")
         if a.full:
             pg.screenshot(path=a.full, full_page=True)
         br.close()
@@ -210,6 +250,8 @@ def main():
         print("  ", e[:200])
     for e in efails:
         print("   방향:", e)
+    if guil >= 6:
+        print(f"   [경고] 화면 글에 «» {guil}쌍 — 강조 부호를 거의 다 뺀다(실패는 아님)")
     sys.exit(1 if errors or over > 0 or efails else 0)
 
 
