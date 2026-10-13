@@ -16,6 +16,11 @@ jobs:
         run: |
           python skills/interactive-book/scripts/poke.py skills/interactive-book/assets/template.html
           python skills/interactive-book/scripts/poke.py skills/interactive-book/assets/template.html --phone
+      - name: direction check fails on a reversed model
+        run: |
+          sed 's/return 1 - Math.exp(-k \* x \* 3);/return Math.exp(-k * x * 3);/' skills/interactive-book/assets/template.html > /tmp/broken.html
+          ! cmp -s /tmp/broken.html skills/interactive-book/assets/template.html || (echo "mutation did not apply" && exit 1)
+          ! python skills/interactive-book/scripts/poke.py /tmp/broken.html || (echo "reversed model passed" && exit 1)
       - name: deploy_pages blocks source documents
         run: |
           mkdir -p /tmp/site && cp skills/interactive-book/assets/template.html /tmp/site/index.html && echo x > /tmp/site/lecture.pdf

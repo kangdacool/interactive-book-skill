@@ -143,6 +143,14 @@ footer { max-width: var(--w); margin: 0 auto; padding: 24px 16px 48px; color: va
     <div class="quiz-q"><p>문제</p><div class="opts"><button class="opt">오답</button><button class="opt" data-correct>정답</button><button class="opt">오답</button></div><div class="quiz-exp">해설 한두 문장.</div></div>
   </section>
 </main>
+<!-- 방향 검사(poke.py): 시뮬레이터마다 «바꾸면 어느 쪽으로» 를 코드보다 먼저 적는다. 근거(강의안 쪽·교과서)는 name 에. -->
+<script type="application/json" id="expect">
+[
+  {"name": "기울기↑ → 출력↑", "sim": "sim-demo", "vary": {"set": "#demo-k", "values": [0.2, 1, 2, 4]}, "read": "#demo-y", "trend": "up"},
+  {"name": "질환 → 출력↓", "sim": "sim-demo", "vary": {"click": ["#demo-mode [data-value=a]", "#demo-mode [data-value=b]"]}, "read": "#demo-y", "trend": "down"},
+  {"name": "점을 오른쪽으로 → 출력↑", "sim": "sim-demo", "vary": {"drag": "#demo-cv", "to": [[0.2, null], [0.5, null], [0.9, null]]}, "read": "#demo-y", "trend": "up"}
+]
+</script>
 <footer>출처: …(교과서 장·지침·논문, PMID/DOI). 시뮬레이터 수치는 교육용 근사 모델이다.</footer>
 
 <script>
@@ -183,7 +191,7 @@ window.K = (function () {
   }
   // 끌기: handles = [{x, y, r}] (캔버스 CSS 좌표). onMove(handle, x, y).
   function drag(st, handles, onMove) {
-    let cur = null;
+    let cur = null; st.cv._handles = handles; // poke.py 방향 검사가 첫 핸들을 잡는다
     const pos = (e) => { const r = st.cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
     st.cv.addEventListener("pointerdown", (e) => { const [x, y] = pos(e);
       cur = handles().find((h) => Math.hypot(h.x - x, h.y - y) < (h.r || 10) + 8) || null;
@@ -226,7 +234,8 @@ window.K = (function () {
       so.textContent = on ? "글도 보기" : "시뮬레이터만"; });
     if (window.renderMathInElement) renderMathInElement(document.body, { delimiters: [{ left: "$$", right: "$$", display: true }, { left: "\\(", right: "\\)", display: false }] });
   });
-  return { color, canvas, sliders, seg, drag, loop, axes };
+  // probe: 화면 숫자로 안 드러나는 모델의 방향(위상 등)을 poke.py 방향 검사에 내놓는 자리. K.probe.이름 = () => 값
+  return { color, canvas, sliders, seg, drag, loop, axes, probe: {} };
 })();
 </script>
 <script>
